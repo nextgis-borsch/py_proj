@@ -19,7 +19,7 @@ incdirs.append('@PROJ4_INCLUDE_DIRS@')
 
 pyprojext =\
 Extension("pyproj._proj",["_proj.c"],include_dirs=incdirs,library_dirs=libdirs,\
-runtime_library_dirs=libdirs,libraries=libraries, extra_link_args=extra_link_args)
+libraries=libraries, extra_link_args=extra_link_args)
 
 extensions = [pyprojext]
 package_data = {}
