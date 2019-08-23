@@ -1,9 +1,9 @@
 ################################################################################
-# Project:  Lib mathplotlib
+# Project:  py proj
 # Purpose:  CMake build scripts
 # Author:   Dmitry Baryshnikov, dmitry.baryshnikov@nexgis.com
 ################################################################################
-# Copyright (C) 2017-2018, NextGIS <info@nextgis.com>
+# Copyright (C) 2017-2019, NextGIS <info@nextgis.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -74,7 +74,7 @@ unset(PYTHON_VERSION_MAJOR)
 unset(PYTHON_VERSION_MINOR)
 
 if(WITH_PYTHON3)
-    # Hack, not find python3 withouut this
+    # Hack, not find python3 without this
     find_program(PYTHON3_EXECUTABLE python3)
     set(PYTHON_EXECUTABLE ${PYTHON3_EXECUTABLE})
 
@@ -176,7 +176,7 @@ endif()
 
 
 include(FindAnyProject)
-find_anyproject(PROJ4 REQUIRED)
+find_anyproject(PROJ REQUIRED)
 
 # config setupext.py
 set(PROJ4_LIBRARY_DIR)
