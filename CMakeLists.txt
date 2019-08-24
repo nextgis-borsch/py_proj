@@ -58,6 +58,7 @@ if(NOT WITH_PYTHON2 AND NOT WITH_PYTHON3)
 endif()
 
 if(WITH_PYTHON2)
+    set(LATEST_AVAILABLE_VERSION 2.2.2)
     find_package(PythonInterp 2)
     if(PYTHONINTERP_FOUND)
         set(PYTHON2_EXECUTABLE ${PYTHON_EXECUTABLE})
@@ -104,7 +105,7 @@ include(util)
 get_compiler_version(COMPILER)
 # get version and download url
 execute_process(COMMAND ${PYTHON_EXECUTABLE}
-    ${CMAKE_SOURCE_DIR}/cmake/pypi_process.py ${PLUGIN} ${CMAKE_CURRENT_BINARY_DIR}/meta.json ${COMPILER}
+    ${CMAKE_SOURCE_DIR}/cmake/pypi_process.py ${PLUGIN} ${CMAKE_CURRENT_BINARY_DIR}/meta.json ${COMPILER} ${LATEST_AVAILABLE_VERSION}
     OUTPUT_VARIABLE PACKAGE_DETAILS
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
@@ -184,6 +185,7 @@ if(OSX_FRAMEWORK)
     macro(get_lib_path_from_include PATH)
         get_filename_component(FW_DIR ${PATH} PATH)
         get_filename_component(PROJ_LIBRARY_DIR ${FW_DIR} PATH)
+        set(PROJ_DATA_DIR "${PROJ_LIBRARY_DIR}/Resources/proj")
     endmacro()
 
     set(PROJ_FRAMEWORK proj)
@@ -193,6 +195,7 @@ elseif(WIN32)
     macro(get_lib_path_from_include PATH)
         get_filename_component(FW_DIR ${PATH} PATH)
         set(PROJ_LIBRARY_DIR "${FW_DIR}/lib")
+        set(PROJ_DATA_DIR "${FW_DIR}/share/proj")
     endmacro()
     get_lib_path_from_include(${PROJ_INCLUDE_DIRS})
 endif()
