@@ -175,7 +175,6 @@ else()
     endmacro()
 endif()
 
-
 include(FindAnyProject)
 find_anyproject(PROJ REQUIRED)
 
@@ -188,9 +187,20 @@ if(OSX_FRAMEWORK)
         set(PROJ_DATA_DIR "${PROJ_LIBRARY_DIR}/Resources/proj")
     endmacro()
 
+    macro(create_symlink PATH_TO_LIB LIB_NAME)
+        warning_message("Create symlink lib${LIB_NAME}.dylib")
+        execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${PATH_TO_LIB} ${PROJECT_BINARY_DIR}/project_lib/lib${LIB_NAME}.dylib)
+    endmacro()
+
+    file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/project_lib)
+
+    get_target_property(LINK_SEARCH_PATH ${PROJ_LIBRARIES} IMPORTED_LOCATION_RELEASE)
+    create_symlink(${LINK_SEARCH_PATH} "${PROJ_LIBRARIES}")
+
     set(PROJ_FRAMEWORK proj)
     get_lib_path_from_include(${PROJ_INCLUDE_DIRS})
-    set(PROJ_FRAMEWORK_DIRS ${PROJ_LIBRARY_DIR})
+    # set(PROJ_FRAMEWORK_DIRS ${PROJ_LIBRARY_DIR})
+    set(PROJ_LIBRARY_DIR ${PROJECT_BINARY_DIR}/project_lib)
 elseif(WIN32)
     macro(get_lib_path_from_include PATH)
         get_filename_component(FW_DIR ${PATH} PATH)
