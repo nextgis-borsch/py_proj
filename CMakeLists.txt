@@ -203,7 +203,6 @@ endif()
 list(REMOVE_DUPLICATES PROJ_INCLUDE_DIRS)
 
 configure_file(${CMAKE_SOURCE_DIR}/cmake/setup.py.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/${OUT_DIR_NAME}/setup.py IMMEDIATE @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/cmake/datadir.py.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/${OUT_DIR_NAME}/lib/pyproj/datadir.py IMMEDIATE COPYONLY)
 
 # python setup.py install --prefix=/usr/local
 

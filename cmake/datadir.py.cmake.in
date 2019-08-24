@@ -1,8 +1,0 @@
-import os
-
-if 'PROJ_DIR' in os.environ:
-    pyproj_datadir = os.environ['PROJ_DIR']
-elif 'PROJ_LIB' in os.environ:
-    pyproj_datadir = os.environ['PROJ_LIB']
-else:
-    pyproj_datadir = os.sep.join([os.path.dirname(__file__), 'data'])
