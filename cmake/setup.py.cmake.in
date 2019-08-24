@@ -37,14 +37,16 @@ def get_proj_libdirs(proj_dir):
     """
     This function finds the library directories
     """
-    return "@PROJ_PROJ_LIBRARY_DIR@"
+    libdirs = ["@PROJ_PROJ_LIBRARY_DIR@"]
+    return libdirs
 
 
 def get_proj_incdirs(proj_dir):
     """
     This function finds the include directories
     """
-    return "@PROJ_INCLUDE_DIRS@"
+    incdirs = ["@PROJ_INCLUDE_DIRS@"]
+    return incdirs
 
 
 def get_cythonize_options():
