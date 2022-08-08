@@ -1,39 +1,42 @@
 import os
+import platform
+import shutil
 import subprocess
 import sys
-from collections import defaultdict
-from distutils.spawn import find_executable
-from glob import glob
+from pathlib import Path
+from typing import Dict, List, Optional
 
 from pkg_resources import parse_version
 from setuptools import Extension, setup
 
-PROJ_MIN_VERSION = parse_version("6.1.0")
-CURRENT_FILE_PATH = os.path.dirname(os.path.abspath(__file__))
-BASE_INTERNAL_PROJ_DIR = "proj_dir"
-INTERNAL_PROJ_DIR = os.path.join(CURRENT_FILE_PATH, "pyproj", BASE_INTERNAL_PROJ_DIR)
+PROJ_MIN_VERSION = parse_version("8.0.0")
+CURRENT_FILE_PATH = Path(__file__).absolute().parent
+BASE_INTERNAL_PROJ_DIR = Path("proj_dir")
+INTERNAL_PROJ_DIR = CURRENT_FILE_PATH / "pyproj" / BASE_INTERNAL_PROJ_DIR
 
 
-def check_proj_version(proj_dir):
+def get_proj_version(proj_dir: Path) -> str:
+    return "@PROJ_VERSION@"
+
+
+def check_proj_version(proj_version: str) -> None:
     """checks that the PROJ library meets the minimum version"""
-    proj_version = parse_version("@PROJ_VERSION@")
-    if proj_version < PROJ_MIN_VERSION:
-        sys.exit(
-            "ERROR: Minimum supported proj version is {}, installed "
-            "version is {}.".format(PROJ_MIN_VERSION, proj_version)
+    if parse_version(proj_version) < PROJ_MIN_VERSION:
+        raise SystemExit(
+            f"ERROR: Minimum supported PROJ version is {PROJ_MIN_VERSION}, installed "
+            f"version is {proj_version}. For more information see: "
+            "https://pyproj4.github.io/pyproj/stable/installation.html"
         )
 
-    return proj_version
 
-
-def get_proj_dir():
+def get_proj_dir() -> Path:
     """
     This function finds the base PROJ directory.
     """
     return "@PROJ_DATA_DIR@"
 
 
-def get_proj_libdirs(proj_dir):
+def get_proj_libdirs(proj_dir: Path) -> List[str]:
     """
     This function finds the library directories
     """
@@ -41,7 +44,7 @@ def get_proj_libdirs(proj_dir):
     return libdirs
 
 
-def get_proj_incdirs(proj_dir):
+def get_proj_incdirs(proj_dir: Path) -> List[str]:
     """
     This function finds the include directories
     """
@@ -56,7 +59,11 @@ def get_cythonize_options():
     # Configure optional Cython coverage.
     cythonize_options = {
         "language_level": sys.version_info[0],
-        "compiler_directives": {"embedsignature": True},
+        "compiler_directives": {
+            "c_string_type": "str",
+            "c_string_encoding": "utf-8",
+            "embedsignature": True,
+        },
     }
     if os.environ.get("PYPROJ_FULL_COVERAGE"):
         cythonize_options["compiler_directives"].update(linetrace=True)
@@ -64,16 +71,16 @@ def get_cythonize_options():
     return cythonize_options
 
 
-def get_libraries(libdirs):
+def get_libraries(libdirs: List[str]) -> List[str]:
     """
     This function gets the libraries to cythonize with
     """
     libraries = ["proj"]
     if os.name == "nt":
         for libdir in libdirs:
-            projlib = glob(os.path.join(libdir, "proj*.lib"))
+            projlib = list(Path(libdir).glob("proj*.lib"))
             if projlib:
-                libraries = [os.path.basename(projlib[0]).split(".lib")[0]]
+                libraries = [str(projlib[0].stem)]
                 break
     return libraries
 
@@ -89,9 +96,9 @@ def get_extension_modules():
     try:
         from Cython.Build import cythonize
     except ImportError:
-        sys.exit(
+        raise SystemExit(
             "ERROR: Cython.Build.cythonize not found. "
-            "Cython is required to build from a repo."
+            "Cython is required to build pyproj."
         )
 
     # By default we'll try to get options PROJ_DIR or the local version of proj
@@ -99,91 +106,69 @@ def get_extension_modules():
     library_dirs = get_proj_libdirs(proj_dir)
     include_dirs = get_proj_incdirs(proj_dir)
 
-    # setup extension options
-    ext_options = dict(
-        include_dirs=include_dirs,
-        library_dirs=library_dirs,
-        runtime_library_dirs=library_dirs if os.name != "nt" else None,
-        libraries=get_libraries(library_dirs),
-    )
+    proj_version = get_proj_version(proj_dir)
+    check_proj_version(proj_version)
+    proj_version_major, proj_version_minor, proj_version_patch = parse_version(
+        proj_version
+    ).base_version.split(".")
 
+    # setup extension options
+    ext_options = {
+        "include_dirs": include_dirs,
+        "library_dirs": library_dirs,
+        "runtime_library_dirs": library_dirs if os.name != "nt" else None,
+        "libraries": get_libraries(library_dirs),
+    }
     # setup cythonized modules
     return cythonize(
         [
-            Extension("pyproj._proj", ["pyproj/_proj.pyx"], **ext_options),
             Extension("pyproj._geod", ["pyproj/_geod.pyx"], **ext_options),
             Extension("pyproj._crs", ["pyproj/_crs.pyx"], **ext_options),
             Extension(
                 "pyproj._transformer", ["pyproj/_transformer.pyx"], **ext_options
             ),
+            Extension("pyproj._compat", ["pyproj/_compat.pyx"], **ext_options),
+            Extension("pyproj.database", ["pyproj/database.pyx"], **ext_options),
             Extension("pyproj._datadir", ["pyproj/_datadir.pyx"], **ext_options),
-            Extension("pyproj._list", ["pyproj/_list.pyx"], **ext_options),
+            Extension("pyproj.list", ["pyproj/list.pyx"], **ext_options),
+            Extension("pyproj._network", ["pyproj/_network.pyx"], **ext_options),
+            Extension("pyproj._sync", ["pyproj/_sync.pyx"], **ext_options),
         ],
         quiet=True,
-        **get_cythonize_options()
+        compile_time_env={
+            "CTE_PROJ_VERSION_MAJOR": int(proj_version_major),
+            "CTE_PROJ_VERSION_MINOR": int(proj_version_minor),
+            "CTE_PROJ_VERSION_PATCH": int(proj_version_patch),
+            "CTE_PYTHON_IMPLEMENTATION": platform.python_implementation(),
+        },
+        **get_cythonize_options(),
     )
 
-def get_package_data():
+
+def get_package_data() -> Dict[str, List[str]]:
     """
     This function retrieves the package data
     """
     # setup package data
-    package_data = defaultdict(list)
-    package_data["pyproj"].append(
-            os.path.join("@PROJ_SHARE_DIR@", "*")
-        )
+    package_data = {"pyproj": ["*.pyi", "py.typed", os.path.join("@PROJ_SHARE_DIR@", "*")]}
     return package_data
+
 
 def get_version():
     """
-    retreive pyproj version information (stored in _proj.pyx) in version variable
-    (taken from Fiona)
+    retreive pyproj version information (taken from Fiona)
     """
-    with open(os.path.join("pyproj", "__init__.py"), "r") as f:
+    with open(Path("pyproj", "__init__.py"), "r") as f:
         for line in f:
             if line.find("__version__") >= 0:
                 # parse __version__ and remove surrounding " or '
                 return line.split("=")[1].strip()[1:-1]
-    sys.exit("ERROR: pyproj version not fount.")
+    raise SystemExit("ERROR: pyproj version not found.")
 
-def get_long_description():
-    """
-    Get the long description for the file.
-    """
-    with open("README.md") as ld_file:
-        return ld_file.read()
 
+# static items in setup.cfg
 setup(
-    name="pyproj",
     version=get_version(),
-    description="Python interface to PROJ (cartographic projections "
-    "and coordinate transformations library)",
-    long_description=get_long_description(),
-    long_description_content_type="text/markdown",
-    url="https://github.com/pyproj4/pyproj",
-    download_url="http://python.org/pypi/pyproj",
-    author="Jeff Whitaker",
-    author_email="jeffrey.s.whitaker@noaa.gov",
-    platforms=["any"],
-    license="OSI Approved",
-    keywords=["python", "map projections", "GIS", "mapping", "maps"],
-    classifiers=[
-        "Development Status :: 4 - Beta",
-        "Intended Audience :: Science/Research",
-        "License :: OSI Approved",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        "Topic :: Scientific/Engineering :: GIS",
-        "Topic :: Scientific/Engineering :: Mathematics",
-        "Operating System :: OS Independent",
-    ],
-    packages=["pyproj"],
     ext_modules=get_extension_modules(),
     package_data=get_package_data(),
-    install_requires=['aenum;python_version<"3.6"'],
 )
