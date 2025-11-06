@@ -147,7 +147,7 @@ else()
 endif()
 
 # Download tarbal
-set(OUT_DIR_NAME ${PROJECT_NAME}-${FULL_VERSION})
+set(OUT_DIR_NAME ${PROJECT_NAME}-${VERSION})
 set(OUT_NAME "${OUT_DIR_NAME}.tar.gz")
 
 if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/${OUT_NAME}")
